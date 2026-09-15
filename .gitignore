@@ -48,3 +48,7 @@ next-env.d.ts
 # Isolated Solidity toolchain and reproducible local build outputs.
 /contracts/node_modules/
 /contracts/artifacts/
+
+# Local Python model experiments.
+__pycache__/
+*.pyc

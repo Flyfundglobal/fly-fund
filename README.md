@@ -18,7 +18,7 @@ Project domain: **flyfund.global** — production deployment is being prepared.
 | BNB / BTC / ETH prices | Live Binance market data through the site's API |
 | Fund contracts | Source implemented; 23 local tests pass; not deployed or independently audited |
 | Wallet / real token feeding | Not connected to the website yet |
-| Fly neural model / decision service | Planned integration; not running in this repository yet |
+| Fly neural model / decision service | Local CPU stimulus lab verified; website and production decision service not connected yet |
 | Individual fly airdrop | Roadmap, not a live claim |
 
 There is no published $FLY contract address here yet. Demo feeding does not move tokens or persist after a refresh. BNCB pricing awaits a verified contract address.
@@ -35,7 +35,7 @@ contracts/scripts/      Reproducible compiler and unsigned deployment preparatio
 docs/                   Development notes
 ```
 
-The future model service, indexer and execution worker belong alongside these components when implemented; their presence is not implied by the current UI.
+The [local model lab](model-lab/README.md) runs the verified FlyBrain connectome for stimulus/readout experiments. The public website is not connected to it. A persistent decision service, indexer and execution worker remain future integration work.
 
 ## Run the website
 
