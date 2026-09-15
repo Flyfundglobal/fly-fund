@@ -94,7 +94,7 @@ export default function TradingRoom({ onFeed, onBooks, onRoadmap, eating }: { on
   return <>
     <div ref={room} className={`trading-room ${smoking?"is-smoking":""} ${eating?"room-fed":""}`}>
       <div className="room-canvas" style={{"--scene-scale":scale} as CSSProperties}>
-        <img className="room-art" src="/trading-room-v9-maodie-reference.webp" width={1672} height={941} fetchPriority="high" alt="A fruit fly trading room with crypto meme decorations, Maodie the cat and a Binance-themed tower outside" draggable="false"/>
+        <img className="room-art" src="/trading-room-v10-cz-portrait.webp" width={1672} height={941} fetchPriority="high" alt="A fruit fly trading room with crypto meme decorations, Maodie the cat and a Binance-themed tower outside" draggable="false"/>
         <Screen width={390} height={310} points={[[421,156],[716,107],[718,341],[426,402]]} className="chart-crt"><div className="crt-title">FLY FUND <span>▁ □ ×</span></div>{chart}</Screen>
         <Screen width={390} height={290} points={[[779,100],[1106,114],[1103,373],[779,348]]} className="quotes-crt"><div className="crt-title">MARKET WATCH <span>▁ □ ×</span></div>{watchlist}</Screen>
         <Screen width={310} height={285} points={[[1163,182],[1394,237],[1372,506],[1148,435]]} className="fund-crt"><div className="fund-terminal roadmap-terminal"><h2>ROADMAP</h2><p className="roadmap-kicker">FLY FUND / BNB CHAIN</p><ol>{[
@@ -103,7 +103,7 @@ export default function TradingRoom({ onFeed, onBooks, onRoadmap, eating }: { on
           ["03", "ON-CHAIN ACTIONS", "PLANNED"],
           ["04", "YOUR OWN FLY", "PERSONAL FLY AIRDROP"],
         ].map(([step,title,status])=><li key={step}><span>{step}</span><div><b>{title}</b><small>{status}</small></div></li>)}</ol><button onClick={onRoadmap}>[ OPEN ROADMAP ]</button></div></Screen>
-        <img className="fly-foreground" src="/trading-room-v9-maodie-reference.webp" alt="" aria-hidden="true"/>
+        <img className="fly-foreground" src="/trading-room-v10-cz-portrait.webp" alt="" aria-hidden="true"/>
         <button className="scene-hotspot fly-hotspot" aria-label="Feed the seated fly" onClick={onFeed}><span>Feed the fly</span></button>
         <button className="scene-hotspot lighter-hotspot" aria-label={smoking?"Put out cigarette":"Light a cigarette"} onClick={light}><span>{smoking?"Back to the charts":"Light a cigarette"}</span></button>
         <button className="scene-hotspot books-hotspot" aria-label="Explore the crypto books" onClick={onBooks}><span>The fly’s reading list</span></button>

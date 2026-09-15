@@ -8,7 +8,7 @@ Source: [Flyfundglobal/fly-fund](https://github.com/Flyfundglobal/fly-fund)
 
 Project domain: **flyfund.global** — production deployment is being prepared.
 
-![FLY FUND trading room](public/trading-room-v9-maodie-reference.png)
+![FLY FUND trading room](public/trading-room-v10-cz-portrait.webp)
 
 ## Current status
 
