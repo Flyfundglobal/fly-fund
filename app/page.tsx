@@ -1,0 +1,86 @@
+"use client";
+
+import { useEffect, useRef, useState, type PointerEvent } from "react";
+import TradingRoom from "./trading-room";
+import { GITHUB_URL } from "@/lib/project";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+type IconProps = { size?: number; className?: string; strokeWidth?: number };
+function retroIcon(name: string) { return function Icon({ size = 32, className = "" }: IconProps) { return <img src={`/icons/${name}.png`} width={size} height={size} alt="" aria-hidden="true" className={`retro-icon ${className}`} draggable="false"/>; }; }
+const Monitor = retroIcon("computer"), FolderOpen = retroIcon("fund"), FileText = retroIcon("ca"), MessageSquare = retroIcon("chat"), Terminal = retroIcon("github"), Wallet = retroIcon("wallet"), FlaskConical = retroIcon("myfly"), Globe = retroIcon("network"), Volume2 = retroIcon("sound"), RoadmapIcon = retroIcon("roadmap");
+function Bug({size=32,className=""}: IconProps) { return <span aria-hidden="true" style={{width:size,height:size}} className={`topdown-frame retro-icon ${className}`}/>; }
+
+type AppId = "about" | "ca" | "fund" | "chat" | "roadmap" | "github" | "myfly" | "wallet" | "books";
+type OpenWindow = { id: AppId; x: number; y: number; z: number; minimized: boolean };
+type Feed = { text: string; amount: string; time: string };
+const apps = [
+  { id: "about", label: "My Computer", icon: Monitor, color: "computer" },
+  { id: "fund", label: "Fly Fund", icon: FolderOpen, color: "folder" },
+  { id: "ca", label: "CA.txt", icon: FileText, color: "document" },
+  { id: "chat", label: "Fly Messenger", icon: MessageSquare, color: "messenger" },
+  { id: "roadmap", label: "Roadmap.txt", icon: RoadmapIcon, color: "document" },
+  { id: "github", label: "GitHub", icon: Terminal, color: "terminal" },
+  { id: "myfly", label: "My Fly", icon: FlaskConical, color: "flask" },
+] as const;
+const titles: Record<AppId, string> = { about: "About FLY FUND", ca: "CA.txt - Notepad", fund: "Fly Fund", chat: "Fly Messenger", roadmap: "Roadmap.txt - Notepad", github: "GitHub - Internet Explorer", myfly: "My Fly - Adoption Center", wallet: "Connect Wallet", books: "The Fly’s Bookshelf" };
+const phases = [
+  ["01", "A fly is born.", "Feed the community fly with $FLY and a message. Every confirmed feeding leaves a public record.", "FEED & RECORD"],
+  ["02", "The fly remembers.", "Connect the neural model. Your feeding becomes part of its history, preferences and responses.", "MODEL & MEMORY"],
+  ["03", "The fly acts.", "Let the fly make decisions within the Fund’s published rules. Follow its actions on BNB Chain.", "ON-CHAIN ACTIONS"],
+  ["04", "A fly of your own.", "Eligible participants receive their own fly through an airdrop. Shared beginnings. A new life to raise.", "PERSONAL FLY AIRDROP"],
+];
+
+export default function Home() {
+  const [windows, setWindows] = useState<OpenWindow[]>([]);
+  const top = useRef(10);
+  const [start, setStart] = useState(false);
+  const [bubble, setBubble] = useState(false);
+  const [feeding, setFeeding] = useState(false);
+  const [amount, setAmount] = useState("1000");
+  const [message, setMessage] = useState("");
+  const [feeds, setFeeds] = useState<Feed[]>([]);
+  const [notice, setNotice] = useState("");
+  const [eating, setEating] = useState(false);
+  const [clock, setClock] = useState("--:--");
+  const [selected, setSelected] = useState<string>("");
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function showFly(){setBubble(true);setFeeding(true);setNotice("");}
+
+  useEffect(() => { const tick = () => setClock(new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })); tick(); const t = setInterval(tick, 1000); return () => { clearInterval(t); if (resetTimer.current) clearTimeout(resetTimer.current); }; }, []);
+  useEffect(() => { const close = (e: KeyboardEvent) => { if (e.key === "Escape") { setStart(false); setBubble(false); } }; window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, []);
+  function open(id: AppId) { if (id === "github") { window.open(GITHUB_URL, "_blank", "noopener,noreferrer"); setStart(false); return; } setStart(false); setSelected(id); const z = ++top.current; setWindows(old => old.some(w => w.id === id) ? old.map(w => w.id === id ? { ...w, minimized: false, z } : w) : [...old, { id, x: Math.min(190 + old.length * 30, Math.max(0, window.innerWidth - 500)), y: 65 + (old.length % 5) * 28, z, minimized: false }]); }
+  function focus(id: AppId) { const z = ++top.current; setWindows(old => old.map(w => w.id === id ? { ...w, z } : w)); }
+  const drag = useRef<{ id: AppId; dx: number; dy: number } | null>(null);
+  function beginDrag(e: PointerEvent<HTMLElement>, w: OpenWindow) { if ((e.target as HTMLElement).closest("button") || window.innerWidth < 700) return; const rect = e.currentTarget.parentElement!.getBoundingClientRect(); drag.current = { id: w.id, dx: e.clientX - rect.left, dy: e.clientY - rect.top }; e.currentTarget.setPointerCapture(e.pointerId); }
+  function moveDrag(e: PointerEvent<HTMLElement>) { const d = drag.current; if (!d) return; const x = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - d.dx)); const y = Math.max(0, Math.min(window.innerHeight - 90, e.clientY - d.dy)); setWindows(old => old.map(w => w.id === d.id ? { ...w, x, y } : w)); }
+  function feed() { if (!message.trim() || !/^\d+(\.\d+)?$/.test(amount) || !Number.isFinite(Number(amount)) || Number(amount) <= 0) { setNotice("Add a message and a valid amount first."); return; } setFeeds(old => [{ text: message.trim(), amount, time: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) }, ...old]); setNotice("Yum. Demo received! No tokens were transferred."); setMessage(""); setEating(true); if (resetTimer.current) clearTimeout(resetTimer.current); resetTimer.current = setTimeout(() => setEating(false), 1600); }
+  function renderApp(id: AppId) {
+    if (id === "books") return <div className="app-body bookshelf"><p>A few things on the fly’s desk.</p>{[
+      ["Freedom of Money", "Changpeng Zhao (CZ) · memoir", "CZ’s account of building Binance and his own journey.", "https://www.prnewswire.com/news-releases/binance-founder-cz-publishes-freedom-of-money-302736472.html"],
+      ["Going Infinite", "Michael Lewis · about Sam Bankman-Fried", "The rise and fall of SBF and FTX. Written by Michael Lewis, not SBF.", "https://www.michaellewiswrites.com/"],
+      ["这世界既残酷也温柔", "孙宇晨 · Justin Sun", "孙宇晨写下的成长与创业经历。", "https://product.dangdang.com/product.aspx?product_id=24191841"],
+      ["Mastering Bitcoin", "Andreas M. Antonopoulos", "How Bitcoin works, from keys and transactions to the network itself.", "https://aantonop.com/books/mastering-bitcoin/"],
+      ["The Bitcoin Standard", "Saifedean Ammous", "Bitcoin through the history and economics of money.", "https://saifedean.com/books"],
+      ["Proof of Stake", "Vitalik Buterin · edited by Nathan Schneider", "Collected writing on Ethereum, coordination and blockchains.", "https://www.sevenstories.com/books/4443-proof-of-stake"],
+      ["The Infinite Machine", "Camila Russo", "The story of Ethereum and the people who built it.", "https://www.camirusso.com/book/"]
+    ].map(([title,author,desc,url],i)=><a className="book-entry" href={url} key={title} target="_blank" rel="noreferrer"><span>0{i+1}</span><div><h2>{title}</h2><b>{author}</b><p>{desc}</p><small>About the book ↗</small></div></a>)}</div>;
+    if (id === "roadmap") return <><div className="menubar">File <span>Edit</span><span>Search</span><span>Help</span></div><div className="notepad"><p className="mono-title">FLY FUND / ROADMAP</p><p>One shared fly. A whole new species.</p>{phases.map(([n,title,desc,label]) => <section className="phase" key={n}><span>PHASE {n} · {n === "01" ? "IN DEVELOPMENT" : "PLANNED"}</span><h2>{title}</h2><p>{desc}</p><small>{label}</small></section>)}<p>Last stop: a fly of your own.</p></div></>;
+    if (id === "ca") return <><div className="menubar">File <span>Edit</span><span>Search</span><span>Help</span></div><div className="notepad ca-note"><p>$FLY — BNB Smart Chain</p><p>Contract address:<br/><strong>Not deployed yet.</strong></p><p>Planned launchpad: Flap</p><p>The verified address will appear here after launch.</p><p>There is no live token address in this preview.</p></div></>;
+    if (id === "about") return <div className="app-body"><div className="about-heading"><Monitor size={54}/><div><h1>FLY FUND</h1><p>Community Fly Operating System</p><small>Version 0.6 · BNB Chain Edition</small></div></div><hr/><p>A fruit fly. A fund. A desktop we all share.</p><p>Feed it $FLY and something worth remembering. Watch the community shape its world.</p><div className="inset about-spec"><p><span>Resident</span><b>Fruit fly #001</b></p><p><span>Home</span><b>BNB Smart Chain</b></p><p><span>Current stage</span><b>Interface preview</b></p></div><p className="muted">Today, we raise one fly together.<br/>Someday, you’ll have a fly of your own.</p><Button className="win-button" onClick={()=>{showFly();}}>Meet the fly</Button></div>;
+    if (id === "fund") return <div className="app-body"><div className="folder-heading"><FolderOpen size={40}/><div><h2>Our fly’s little treasury.</h2><p>BNB Smart Chain</p></div></div><div className="inset fund-balance"><small>FUND BALANCE</small><strong>— <span>FLY</span></strong><span>Not connected</span></div><p>Fund contract: <b>Awaiting deployment</b></p><p>The dedicated vault will receive feeding tokens. Its rules and permissions will be published here.</p><div className="status-strip">On-chain actions arrive in Phase 03.</div></div>;
+    if (id === "chat") return <div className="app-body messenger-body"><div className="buddy"><span className="buddy-avatar"><Bug size={32}/></span><div><b>Community Fly #001</b><small>Demo feeding log</small></div></div><div className="inset chat-log" aria-live="polite"><p className="system-message">— Welcome to Fly Messenger —</p>{feeds.length === 0 ? <div className="chat-empty"><MessageSquare size={30}/><p>Its story starts with you.</p><small>Try a feeding to leave a demo message.</small></div> : feeds.map((f,i)=><div className="chat-entry" key={i}><small>{f.time} · DEMO</small><p><b>You:</b> {f.text}</p><span>{Number(f.amount).toLocaleString()} FLY · simulated</span></div>)}</div><p className="muted small">Preview records only. They clear when you refresh.</p><Button className="win-button" onClick={()=>{showFly();}}>Feed the fly…</Button></div>;
+    if (id === "github") return <div className="app-body"><Terminal size={46} className="large-app-icon"/><h2>Open the experiment.</h2><a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">Flyfundglobal / fly-fund ↗</a></div>;
+    if (id === "myfly") return <div className="app-body adoption"><FlaskConical size={48}/><h2>A fly of your own.</h2><p>One day, this desktop will have a new resident.<br/>And that resident will be yours.</p><div className="inset adoption-ticket"><small>ADOPTION CERTIFICATE</small><strong>Reserved for the future.</strong><span>PHASE 04 · PERSONAL FLY AIRDROP</span></div><p className="muted">Eligibility and claiming rules will be announced before the airdrop.</p><Button className="win-button" onClick={()=>open("roadmap")}>View roadmap</Button></div>;
+    return <div className="app-body"><Wallet size={44} className="large-app-icon"/><h2>Wallet connection is coming.</h2><p>This is an interactive preview. No wallet signature, token approval or payment is requested.</p><p>Live feeding opens after the $FLY and Fund contracts are configured.</p><Button className="win-button" onClick={()=>{setWindows(old=>old.filter(w=>w.id!=="wallet"));showFly();}}>Try demo feeding</Button></div>;
+  }
+  const active = windows.filter(w=>!w.minimized).sort((a,b)=>b.z-a.z)[0]?.id;
+  return <main className="desktop office-desktop" onPointerDown={e=>{if(e.target===e.currentTarget){setStart(false);setSelected("");}}}>
+    <nav className="desktop-icons" aria-label="Desktop applications">{apps.map(a=>a.id === "github" ? <a key={a.id} className="desktop-icon" href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub — FLY FUND source code"><span className={`pixel-icon ${a.color}`}><a.icon strokeWidth={1.7}/></span><span className="icon-caption">{a.label}</span></a> : <button key={a.id} className={`desktop-icon ${selected===a.id?"selected":""}`} onClick={()=>open(a.id)}><span className={`pixel-icon ${a.color}`}><a.icon strokeWidth={1.7}/></span><span className="icon-caption">{a.label}</span></button>)}<button className={`desktop-icon ${selected==="fly"?"selected":""}`} onClick={()=>{setSelected("fly");showFly();}}><span className="pixel-icon fly-shortcut"><Bug/></span><span className="icon-caption">Feed the Fly</span></button></nav>
+    <TradingRoom onFeed={showFly} onBooks={()=>open("books")} onRoadmap={()=>open("roadmap")} eating={eating}/>
+    {bubble&&<aside className={`fly-bubble office-feed-bubble ${feeding?"expanded":""}`} aria-label="Fly assistant"><button className="bubble-close" aria-label="Close fly bubble" onClick={()=>setBubble(false)}>×</button><div className="bubble-eyebrow">YOUR FRIENDLY NEIGHBORHOOD FLY</div><h2>{eating?"That’s food for thought.":feeding?"What’s on your mind?":"Hi. I live here now."}</h2>{!feeding?<><p>A tiny brain. A whole chain to explore.<br/>Got some $FLY and a thought to share?</p><div className="bubble-actions"><Button className="win-button" onClick={()=>setFeeding(true)}>Feed me</Button><button className="text-link" onClick={()=>open("about")}>What is this?</button></div></>:<form onSubmit={e=>{e.preventDefault();feed();}}><label htmlFor="thought">Tell me something.</label><Textarea id="thought" className="retro-input" placeholder="BNB is pretty cool. Here’s why…" value={message} onChange={e=>{setMessage(e.target.value);setNotice("");}} maxLength={280}/><div className="text-counter">{message.length}/280</div><label htmlFor="amount">A little food for thought.</label><div className="amount-row"><Input id="amount" inputMode="decimal" className="retro-input" value={amount} onChange={e=>setAmount(e.target.value)}/><b>$FLY</b></div><div className="presets">{["1000","10000","100000"].map(n=><Button className={`win-button ${amount===n?"pressed":""}`} key={n} type="button" onClick={()=>setAmount(n)}>{Number(n)/1000}K</Button>)}</div><Button className="win-button feed-cta" type="submit">Feed me · Demo</Button><p className="demo-note">Preview only. No tokens will be transferred.</p>{notice&&<p className="feed-notice" role="status">{notice}</p>}</form>}</aside>}
+    {windows.filter(w=>!w.minimized).map(w=><section key={w.id} className={`app-window ${active===w.id?"focused":""}`} style={{left:w.x,top:w.y,zIndex:w.z}} aria-label={titles[w.id]} onPointerDown={()=>focus(w.id)}><header className="titlebar" onPointerDown={e=>beginDrag(e,w)} onPointerMove={moveDrag} onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}><span className="title-icon">{w.id==="wallet"?<Wallet size={16}/>: (()=>{const Icon=apps.find(a=>a.id===w.id)?.icon ?? FileText;return <Icon size={16}/>;})()}</span><span className="window-title">{titles[w.id]}</span><button aria-label={`Minimize ${titles[w.id]}`} onClick={()=>setWindows(old=>old.map(x=>x.id===w.id?{...x,minimized:true}:x))}>_</button><button aria-label={`Close ${titles[w.id]}`} onClick={()=>setWindows(old=>old.filter(x=>x.id!==w.id))}>×</button></header>{renderApp(w.id)}<div className="window-status"><span>{w.id==="roadmap"?"4 phases": "FLY FUND"}</span><span>{w.id==="chat"?`${feeds.length} demo messages`:"BNB Chain"}</span><i>◢</i></div></section>)}
+    {start&&<nav className="start-menu" aria-label="Start menu"><div className="start-sidebar">FLY<span>FUND</span><small>98</small></div><div className="start-items">{apps.map(a=><button key={a.id} onClick={()=>open(a.id)}><a.icon size={22}/>{a.label}<span>›</span></button>)}<hr/><button onClick={()=>{setStart(false);showFly();}}><Bug size={22}/>Feed the Fly</button><button onClick={()=>open("wallet")}><Wallet size={22}/>Connect wallet…</button></div></nav>}
+    <footer className="taskbar"><Button className={`win-button start-button ${start?"pressed":""}`} onClick={()=>setStart(!start)} aria-expanded={start}><Monitor size={22}/><b>Start</b></Button><div className="taskbar-divider"/><button className="quick-launch" aria-label="Show desktop" onClick={()=>setWindows(old=>old.map(w=>({...w,minimized:true})))}><Monitor size={21}/></button><div className="task-buttons">{windows.map(w=><button key={w.id} className={`task-button ${!w.minimized&&active===w.id?"pressed":""}`} onClick={()=>{if(!w.minimized&&active===w.id)setWindows(old=>old.map(x=>x.id===w.id?{...x,minimized:true}:x));else open(w.id);}}>{titles[w.id].split(" - ")[0]}</button>)}</div><Button className="win-button wallet-task" onClick={()=>open("wallet")}><Wallet size={16}/><span>Connect wallet</span></Button><div className="system-tray"><Globe size={15}/><span className="tray-network">BSC · v0.6</span><Volume2 size={16}/><time suppressHydrationWarning>{clock}</time></div></footer>
+  </main>;
+}

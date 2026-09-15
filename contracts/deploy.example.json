@@ -1,0 +1,10 @@
+{
+  "chainId": 97,
+  "flyToken": null,
+  "executor": null,
+  "router": null,
+  "wrappedNative": null,
+  "extraAssets": [],
+  "maxTradeBps": null,
+  "dailySpendBps": null
+}

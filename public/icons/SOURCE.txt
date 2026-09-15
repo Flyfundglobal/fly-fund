@@ -1,0 +1,3 @@
+Icons from @react95/icons 2.5.3
+https://github.com/React95/React95/tree/master/packages/icons
+Package license: MIT. See REACT95-LICENSE.txt.
