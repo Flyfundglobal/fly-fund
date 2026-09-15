@@ -55,7 +55,7 @@ npm run build
 npm start -- --port 5185
 ```
 
-The current build uses vinext/Vite and a Cloudflare Worker runtime. `npm start` is a local Wrangler preview, **not a VPS production service**. Vultr production deployment needs the corresponding runtime/adapter work. Hosting details inherited from the starter are documented in [starter runtime notes](docs/starter-runtime.md).
+The current build uses vinext/Vite and a Cloudflare Worker runtime. `npm start` is a local Wrangler preview, **not a VPS production service**. It serves a fixed build snapshot under `.sites-runtime/preview-releases`, retaining earlier hashed assets so rebuilding does not break visitors' open pages. Vultr production deployment needs the corresponding runtime/adapter work. Hosting details inherited from the starter are documented in [starter runtime notes](docs/starter-runtime.md).
 
 ## Build and test contracts
 

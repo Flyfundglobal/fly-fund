@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import styles from "./globals.css?inline";
 
 export const metadata: Metadata = {
   title: "FLY FUND — The Trading Room",
@@ -17,6 +17,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" >
+      <head>
+        {/* Keep the desktop styled even when a separate asset request fails. */}
+        <style dangerouslySetInnerHTML={{ __html: styles }} />
+      </head>
       <body >{children}</body>
     </html>
   );

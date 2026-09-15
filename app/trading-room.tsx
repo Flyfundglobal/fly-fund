@@ -62,7 +62,6 @@ export default function TradingRoom({ onFeed, onBooks, onRoadmap, eating }: { on
   useEffect(()=>{
     let stopped=false,timer:ReturnType<typeof setTimeout>;
     const controller=new AbortController();
-    setConnection("connecting");
     async function update(){
       if(document.hidden){timer=setTimeout(update,8000);return;}
       try{
@@ -78,19 +77,24 @@ export default function TradingRoom({ onFeed, onBooks, onRoadmap, eating }: { on
   useEffect(()=>()=>{if(smokeTimer.current)clearTimeout(smokeTimer.current);},[]);
   const quote=market?.quotes.find(q=>q.symbol===symbol);
   const status=connection==="live"?"LIVE · 8s":connection==="stale"?"RECONNECTING":"CONNECTING";
+  function chooseSymbol(next:string){
+    if(next===symbol)return;
+    setConnection("connecting");
+    setSymbol(next);
+  }
   function light(){
     if(smokeTimer.current)clearTimeout(smokeTimer.current);
     setSmoking(current=>{if(!current)smokeTimer.current=setTimeout(()=>setSmoking(false),14000);return !current;});
   }
   const watchlist=<div className="watchlist"><div className="quote-columns"><span>Asset</span><span>USDT</span><span>24h</span></div>{["FLY","BNB","BNCB","BTC","ETH"].map(ticker=>{
     const q=market?.quotes.find(v=>v.symbol===ticker);
-    return <button key={ticker} className={`quote-row ${symbol===ticker?"selected-quote":""}`} disabled={!q} onClick={()=>setSymbol(ticker)} aria-label={q?`Show ${ticker} chart`:`${ticker} ${ticker==="FLY"?"not launched":"awaiting verified contract"}`}><b>{ticker}</b><span key={q?.price} className={q?"quote-value":"quote-pending"}>{q?price(q.price):ticker==="FLY"?"PRE-LAUNCH":"CA PENDING"}</span><span className={q?(q.change>=0?"market-up":"market-down"):"quote-pending"}>{q?`${q.change>=0?"+":""}${q.change.toFixed(2)}%`:"—"}</span></button>;
+    return <button key={ticker} className={`quote-row ${symbol===ticker?"selected-quote":""}`} disabled={!q} onClick={()=>chooseSymbol(ticker)} aria-label={q?`Show ${ticker} chart`:`${ticker} ${ticker==="FLY"?"not launched":"awaiting verified contract"}`}><b>{ticker}</b><span key={q?.price} className={q?"quote-value":"quote-pending"}>{q?price(q.price):ticker==="FLY"?"PRE-LAUNCH":"CA PENDING"}</span><span className={q?(q.change>=0?"market-up":"market-down"):"quote-pending"}>{q?`${q.change>=0?"+":""}${q.change.toFixed(2)}%`:"—"}</span></button>;
   })}<div className="market-source"><span>{status}</span><span>{market?new Date(market.fetchedAt).toLocaleTimeString("en-GB"):"--:--:--"}</span></div></div>;
-  const chart=<><div className="chart-tabs">{["BNB","BTC","ETH"].map(t=><button key={t} onClick={()=>setSymbol(t)} className={symbol===t?"on":""}>{t}</button>)}<span>5m</span></div><div className="chart-price">{symbol}/USDT <b>{quote?price(quote.price):"—"}</b></div><Candles bars={market?.symbol===symbol?market.candles:[]} symbol={symbol}/></>;
+  const chart=<><div className="chart-tabs">{["BNB","BTC","ETH"].map(t=><button key={t} onClick={()=>chooseSymbol(t)} className={symbol===t?"on":""}>{t}</button>)}<span>5m</span></div><div className="chart-price">{symbol}/USDT <b>{quote?price(quote.price):"—"}</b></div><Candles bars={market?.symbol===symbol?market.candles:[]} symbol={symbol}/></>;
   return <>
     <div ref={room} className={`trading-room ${smoking?"is-smoking":""} ${eating?"room-fed":""}`}>
       <div className="room-canvas" style={{"--scene-scale":scale} as CSSProperties}>
-        <img className="room-art" src="/trading-room-v9-maodie-reference.png" alt="A fruit fly trading room with crypto meme decorations, Maodie the cat and a Binance-themed tower outside" draggable="false"/>
+        <img className="room-art" src="/trading-room-v9-maodie-reference.webp" width={1672} height={941} fetchPriority="high" alt="A fruit fly trading room with crypto meme decorations, Maodie the cat and a Binance-themed tower outside" draggable="false"/>
         <Screen width={390} height={310} points={[[421,156],[716,107],[718,341],[426,402]]} className="chart-crt"><div className="crt-title">FLY FUND <span>▁ □ ×</span></div>{chart}</Screen>
         <Screen width={390} height={290} points={[[779,100],[1106,114],[1103,373],[779,348]]} className="quotes-crt"><div className="crt-title">MARKET WATCH <span>▁ □ ×</span></div>{watchlist}</Screen>
         <Screen width={310} height={285} points={[[1163,182],[1394,237],[1372,506],[1148,435]]} className="fund-crt"><div className="fund-terminal roadmap-terminal"><h2>ROADMAP</h2><p className="roadmap-kicker">FLY FUND / BNB CHAIN</p><ol>{[
@@ -99,13 +103,13 @@ export default function TradingRoom({ onFeed, onBooks, onRoadmap, eating }: { on
           ["03", "ON-CHAIN ACTIONS", "PLANNED"],
           ["04", "YOUR OWN FLY", "PERSONAL FLY AIRDROP"],
         ].map(([step,title,status])=><li key={step}><span>{step}</span><div><b>{title}</b><small>{status}</small></div></li>)}</ol><button onClick={onRoadmap}>[ OPEN ROADMAP ]</button></div></Screen>
-        <img className="fly-foreground" src="/trading-room-v9-maodie-reference.png" alt="" aria-hidden="true"/>
+        <img className="fly-foreground" src="/trading-room-v9-maodie-reference.webp" alt="" aria-hidden="true"/>
         <button className="scene-hotspot fly-hotspot" aria-label="Feed the seated fly" onClick={onFeed}><span>Feed the fly</span></button>
         <button className="scene-hotspot lighter-hotspot" aria-label={smoking?"Put out cigarette":"Light a cigarette"} onClick={light}><span>{smoking?"Back to the charts":"Light a cigarette"}</span></button>
         <button className="scene-hotspot books-hotspot" aria-label="Explore the crypto books" onClick={onBooks}><span>The fly’s reading list</span></button>
         <button className="scene-hotspot founders-books-hotspot" aria-label="Explore the CZ, SBF and Justin Sun books" onClick={onBooks}><span>CZ, SBF & Justin Sun</span></button>
         <button className="screen-zoom" onClick={()=>setZoom(true)} aria-label="Enlarge live prices">↗</button>
-        <div className="smoking-effect" aria-hidden="true"><img className="smoking-cigarette" src="/trading-room-smoking-source.png" alt=""/><div className="smoke-puffs">{[0,1,2,3,4,5].map(i=><span key={i} style={{"--puff":i} as CSSProperties}>░</span>)}</div></div>
+        <div className="smoking-effect" aria-hidden="true">{smoking&&<img className="smoking-cigarette" src="/trading-room-smoking-source.webp" alt=""/>}<div className="smoke-puffs">{[0,1,2,3,4,5].map(i=><span key={i} style={{"--puff":i} as CSSProperties}>░</span>)}</div></div>
         <div className="desk-feed-hint"><span>{eating?"ALPHA RECEIVED.":smoking?"Touch grass.":"GM. WAGMI."}</span><button onClick={onFeed}>Feed $FLY</button></div>
       </div>
       <div className="mobile-market"><div className="mobile-market-title">MARKET WATCH <button onClick={()=>setZoom(true)}>Expand ↗</button></div>{watchlist}<div className="mobile-room-actions"><button onClick={onFeed}>Feed $FLY</button><button onClick={light}>{smoking?"Put it out":"Smoke break"}</button><button onClick={onBooks}>Books</button></div></div>
