@@ -89,7 +89,7 @@ class SocialTests(unittest.TestCase):
         with self.assertRaises(InputError):
             self.store.create_draft({"platform": "x", "text": "Draft", "source_ids": ["square:9999"]})
 
-    def test_local_http_read_draft_and_no_publish_route(self):
+    def test_local_http_read_draft_and_unconfigured_publish(self):
         reader = XReader(fetch=lambda *_: {"code": 200, "status": fixture()})
         server = ThreadingHTTPServer(("127.0.0.1", 0), handler(self.store, reader))
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -107,7 +107,11 @@ class SocialTests(unittest.TestCase):
         self.assertEqual(post["id"], "x:123456")
         draft = request("/api/social/drafts", {"platform": "x", "text": "Draft", "source_ids": [post["id"]]})
         self.assertEqual(draft["state"], "draft")
-        for path, expected, headers in [("/api/social/publish", 404, {}), ("/api/social/import", 403, {"Origin": "https://evil.test"})]:
+        with self.assertRaises(urllib.error.HTTPError) as context:
+            request("/api/social/publish", {"draft_id": draft["id"]})
+        self.assertEqual(context.exception.code, 503)
+        self.assertEqual(self.store.draft(draft["id"])["state"], "draft")
+        for path, expected, headers in [("/api/social/publish", 400, {}), ("/api/social/import", 403, {"Origin": "https://evil.test"})]:
             with self.subTest(path=path), self.assertRaises(urllib.error.HTTPError) as context:
                 request(path, {}, headers)
             self.assertEqual(context.exception.code, expected)

@@ -1,4 +1,4 @@
-"""Local social inbox + draft outbox. No posting, trading, or model decisions."""
+"""Local social inbox and explicit text publishing. No trading or model decisions."""
 from __future__ import annotations
 
 import argparse
@@ -16,6 +16,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+
+from publishing import Publishers, PublishError, REQUIRED
 
 ROOT = Path(__file__).resolve().parents[1]
 HANDLE = re.compile(r"[A-Za-z0-9_]{1,15}\Z")
@@ -256,7 +258,7 @@ class Store:
             draft = {"id": str(uuid.uuid4()), "platform": platform, "text": text.strip(), "state": "draft",
                      "published": False, "created_at": now(), "source_snapshots": source_snapshots,
                      "length_check": "not_platform_validated", "generation": "supplied_text"}
-            # This is an exportable body only. No outbound POST capability exists in this service.
+            # Preview only; a separate explicit publish request submits this immutable draft.
             draft["proposed_payload"] = {"bodyTextOnly": draft["text"]} if platform == "square" else {"text": draft["text"]}
             db.execute("INSERT INTO drafts VALUES (?,?,?)", (draft["id"], json.dumps(draft, ensure_ascii=False), draft["created_at"]))
         return draft
@@ -265,8 +267,43 @@ class Store:
         with self.connect() as db:
             return [json.loads(r[0]) for r in db.execute("SELECT payload FROM drafts ORDER BY created_at DESC LIMIT 100").fetchall()]
 
+    def draft(self, draft_id):
+        if not isinstance(draft_id, str):
+            raise InputError("A draft_id is required")
+        with self.connect() as db:
+            row = db.execute("SELECT payload FROM drafts WHERE id=?", (draft_id,)).fetchone()
+        if not row:
+            raise InputError("Unknown draft")
+        return json.loads(row[0])
 
-def handler(store, reader):
+    def claim_publication(self, draft_id, account):
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT payload FROM drafts WHERE id=?", (draft_id,)).fetchone()
+            if not row:
+                raise InputError("Unknown draft")
+            draft = json.loads(row[0])
+            if draft["state"] != "draft":
+                return draft, False
+            draft.update(state="publishing", published=None, attempted_at=now(), intended_account=account,
+                         account_verification="operator_configured_not_provider_verified")
+            db.execute("UPDATE drafts SET payload=? WHERE id=?", (json.dumps(draft, ensure_ascii=False), draft_id))
+        return draft, True
+
+    def finish_publication(self, draft_id, result):
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT payload FROM drafts WHERE id=?", (draft_id,)).fetchone()
+            draft = json.loads(row[0])
+            if draft["state"] != "publishing":
+                raise InputError("Publication is not in flight")
+            draft.update(result)
+            db.execute("UPDATE drafts SET payload=? WHERE id=?", (json.dumps(draft, ensure_ascii=False), draft_id))
+        return draft
+
+
+def handler(store, reader, publishers=None):
+    publishers = publishers or Publishers()
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_):
             pass
@@ -291,8 +328,9 @@ def handler(store, reader):
                 return self.respond({"error": "local_only"}, 403)
             if self.path == "/api/social/status":
                 return self.respond({"x_provider": reader.provider, "x_configured": reader.provider == "fxtwitter" or bool(reader.key),
-                                     "square_read": "manual_import_only", "square_post_api": "documented_not_connected",
-                                     "publishing_enabled": False, "automatic_collection_enabled": False,
+                                     "square_read": "manual_import_only", "square_post_api": "implemented_awaiting_credentials_and_live_test",
+                                     "publishing_enabled": any(p["configured"] for p in publishers.status().values()),
+                                     "publishers": publishers.status(), "automatic_collection_enabled": False,
                                      "storage": "sqlite", "drafts": ["x", "square"]})
             if self.path == "/api/social/posts":
                 return self.respond({"posts": store.posts(), "limit": 500})
@@ -322,7 +360,13 @@ def handler(store, reader):
                     return self.respond(store.import_post(args))
                 if self.path == "/api/social/drafts":
                     return self.respond(store.create_draft(args), 201)
+                if self.path == "/api/social/publish":
+                    result = publishers.publish(store, args.get("draft_id"))
+                    code = 200 if result["state"] == "published" else 409
+                    return self.respond(result, code)
                 return self.respond({"error": "not_found"}, 404)
+            except PublishError as error:
+                return self.respond({"error": error.code, "message": str(error)}, 503 if error.code == "not_configured" else 400)
             except ProviderError as error:
                 return self.respond({"error": error.code, "message": str(error)}, 503 if error.code.endswith("unavailable") or error.code == "not_configured" else 502)
             except (ValueError, TypeError, KeyError):
@@ -337,11 +381,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=5188)
     parser.add_argument("--db", type=Path, default=ROOT / ".sites-runtime/social/inbox.sqlite3")
+    parser.add_argument("--credentials", type=Path, default=ROOT / ".sites-runtime/social/credentials.json")
     parser.add_argument("--x-provider", default=os.environ.get("FLY_X_PROVIDER", "fxtwitter"), choices=["fxtwitter", "twitterapi_io"])
     args = parser.parse_args()
-    reader = XReader(args.x_provider, os.environ.get("TWITTERAPI_IO_KEY"))
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler(Store(args.db), reader))
-    print(f"FLY FUND social inbox: http://127.0.0.1:{args.port}/api/social/status (drafts only)", flush=True)
+    credentials = {}
+    allowed = {key for names in REQUIRED.values() for key in names}
+    if args.credentials.exists():
+        if args.credentials.stat().st_mode & 0o077:
+            parser.error("Credentials file must be private: chmod 600 <file>")
+        credentials = json.loads(args.credentials.read_text())
+        if not isinstance(credentials, dict) or not set(credentials) <= allowed or not all(isinstance(v, str) for v in credentials.values()):
+            parser.error("Invalid project credentials file")
+    credentials.update({key: os.environ[key] for key in allowed if os.environ.get(key)})
+    reader = XReader(args.x_provider, credentials.get("TWITTERAPI_IO_KEY"))
+    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler(Store(args.db), reader, Publishers(credentials)))
+    print(f"FLY FUND social service: http://127.0.0.1:{args.port}/api/social/status", flush=True)
     server.serve_forever()
 
 
