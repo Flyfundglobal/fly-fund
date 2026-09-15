@@ -19,6 +19,7 @@ Project domain: **flyfund.global** — production deployment is being prepared.
 | Fund contracts | Source implemented; 23 local tests pass; not deployed or independently audited |
 | Wallet / real token feeding | Not connected to the website yet |
 | Fly neural model / decision service | Local CPU stimulus lab verified; website and production decision service not connected yet |
+| Social inputs / posting drafts | Local X reader and X/Square draft inbox; Square reading is manual import only |
 | Individual fly airdrop | Roadmap, not a live claim |
 
 There is no published $FLY contract address here yet. Demo feeding does not move tokens or persist after a refresh. BNCB pricing awaits a verified contract address.
@@ -33,9 +34,12 @@ contracts/src/          FLY feeding/accounting and Fund vault contracts
 contracts/test/         Local EVM and deployment-configuration tests
 contracts/scripts/      Reproducible compiler and unsigned deployment preparation
 docs/                   Development notes
+social/                 Local X reader, manual Square import and draft-only outbox
 ```
 
 The [local model lab](model-lab/README.md) runs the verified FlyBrain connectome for stimulus/readout experiments. The public website is not connected to it. A persistent decision service, indexer and execution worker remain future integration work.
+
+The [social inbox](social/README.md) reads X through a third-party provider and stores source-linked drafts locally. It does not publish posts, run daily decisions, or assign paid feeding weight to social content. Automated Square reading has not been verified.
 
 ## Run the website
 
